@@ -10,11 +10,14 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 from keras.applications.imagenet_utils import preprocess_input
 
+# ----------------------------------------
+# Page Config
+# ----------------------------------------
 st.set_page_config(page_title="YasOrna Visual Search", layout="wide")
 
-# ----------------------------
-# Step 1: Download the model
-# ----------------------------
+# ----------------------------------------
+# Download model if not exists
+# ----------------------------------------
 MODEL_PATH = "feature_extractor.h5"
 GOOGLE_DRIVE_ID = "18ALhVqJ0We9MMs3wzqytbdvWHCDw2Bc0"
 GOOGLE_DRIVE_URL = f"https://drive.google.com/uc?id={GOOGLE_DRIVE_ID}"
@@ -23,9 +26,9 @@ if not os.path.exists(MODEL_PATH):
     with st.spinner("🔽 Downloading model from Google Drive..."):
         gdown.download(GOOGLE_DRIVE_URL, MODEL_PATH, quiet=False)
 
-# ----------------------------
-# Step 2: Load models and feature files
-# ----------------------------
+# ----------------------------------------
+# Load model and feature files
+# ----------------------------------------
 feat_extractor = load_model(MODEL_PATH)
 
 with open("pca_model.pkl", "rb") as f:
@@ -36,12 +39,21 @@ pca_features = np.load("pca_features.npy")
 with open("valid_images.pkl", "rb") as f:
     valid_images = pickle.load(f)
 
-# ✅ Normalize image paths (important!)
-valid_images = [os.path.normpath(path) for path in valid_images]
+# ----------------------------------------
+# Fix paths for Linux
+# ----------------------------------------
+IMAGE_BASE_DIR = os.path.join(os.getcwd(), "Images")  # Adjust if Images is in a different location
 
-# ----------------------------
+def fix_path(path):
+    fixed = os.path.normpath(path.replace("\\", "/"))  # Windows to Linux format
+    subpath = os.path.join(*fixed.split(os.sep)[-2:])  # Keep last 2 parts like "Bangles/image1.png"
+    return os.path.join(IMAGE_BASE_DIR, subpath)
+
+valid_images = [fix_path(p) for p in valid_images]
+
+# ----------------------------------------
 # Helper Functions
-# ----------------------------
+# ----------------------------------------
 def process_image(uploaded_file):
     img = Image.open(uploaded_file).convert("RGB")
     img = img.resize((224, 224))
@@ -77,9 +89,9 @@ def store_details_and_open(img_path, price, description):
     }
     st.session_state["page"] = "details"
 
-# ----------------------------
+# ----------------------------------------
 # UI Logic
-# ----------------------------
+# ----------------------------------------
 if "page" not in st.session_state:
     st.session_state["page"] = "home"
 
@@ -96,8 +108,8 @@ if st.session_state["page"] == "home":
         similar_images = get_closest_images(features)
 
         st.subheader("🔗 Most Similar Products")
-        cols = st.columns(3)
 
+        cols = st.columns(3)
         for i, idx in enumerate(similar_images):
             img_path = valid_images[idx]
             price = f"₹{random.randint(5000, 100000):,}"
