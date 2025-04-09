@@ -3,34 +3,23 @@ import numpy as np
 import pickle
 import random
 import os
-import gdown
 from PIL import Image
 from scipy.spatial import distance
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 from keras.applications.imagenet_utils import preprocess_input
-st.set_page_config(page_title="YasOrna Visual Search", layout="wide")
 
 # ----------------------------
 # Step 1: Download the model
 # ----------------------------
 
-MODEL_PATH = "feature_extractor.h5"
-GOOGLE_DRIVE_ID = "18ALhVqJ0We9MMs3wzqytbdvWHCDw2Bc0"
-GOOGLE_DRIVE_URL = f"https://drive.google.com/uc?id={GOOGLE_DRIVE_ID}"
-
-if not os.path.exists(MODEL_PATH):
-    with st.spinner("🔽 Downloading model from Google Drive..."):
-        gdown.download(GOOGLE_DRIVE_URL, MODEL_PATH, quiet=False)
-
 # ----------------------------
 # Step 2: Load models and feature files
 # ----------------------------
-feat_extractor = load_model(MODEL_PATH)
+feat_extractor = load_model("feature_extractor.h5")
 
 with open("pca_model.pkl", "rb") as f:
     pca = pickle.load(f)
-
 pca_features = np.load("pca_features.npy")
 
 with open("valid_images.pkl", "rb") as f:
@@ -77,7 +66,7 @@ def store_details_and_open(img_path, price, description):
 # ----------------------------
 # UI Logic
 # ----------------------------
-
+st.set_page_config(page_title="YasOrna Visual Search", layout="wide")
 if "page" not in st.session_state:
     st.session_state["page"] = "home"
 
@@ -94,11 +83,10 @@ if st.session_state["page"] == "home":
         similar_images = get_closest_images(features)
 
         st.subheader("🔗 Most Similar Products")
-
         cols = st.columns(3)
+
         for i, idx in enumerate(similar_images):
-            img_path = valid_images[idx]
-            
+            img_path = os.path.normpath(valid_images[idx])  # ✅ Fix Windows path issue
             price = f"₹{random.randint(5000, 100000):,}"
             description = get_random_description()
 
