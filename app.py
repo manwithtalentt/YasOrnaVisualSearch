@@ -96,7 +96,7 @@ if "page" not in st.session_state:
     st.session_state["page"] = "home"
 
 if st.session_state["page"] == "home":
-    st.title("🔍 Image Similarity Finder")
+    st.title("🔍 Visual Jewelry Search")
     uploaded_file = st.file_uploader("📤 Upload an image", type=["jpg", "jpeg", "png"])
 
     if uploaded_file is not None:
