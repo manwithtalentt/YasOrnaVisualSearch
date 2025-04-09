@@ -9,15 +9,24 @@ from scipy.spatial import distance
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 from keras.applications.imagenet_utils import preprocess_input
+st.set_page_config(page_title="YasOrna Visual Search", layout="wide")
 
 # ----------------------------
 # Step 1: Download the model
 # ----------------------------
 
+MODEL_PATH = "feature_extractor.h5"
+GOOGLE_DRIVE_ID = "18ALhVqJ0We9MMs3wzqytbdvWHCDw2Bc0"
+GOOGLE_DRIVE_URL = f"https://drive.google.com/uc?id={GOOGLE_DRIVE_ID}"
+
+if not os.path.exists(MODEL_PATH):
+    with st.spinner("🔽 Downloading model from Google Drive..."):
+        gdown.download(GOOGLE_DRIVE_URL, MODEL_PATH, quiet=False)
+
 # ----------------------------
 # Step 2: Load models and feature files
 # ----------------------------
-feat_extractor = load_model("feature_extractor.h5")
+feat_extractor = load_model(MODEL_PATH)
 
 with open("pca_model.pkl", "rb") as f:
     pca = pickle.load(f)
@@ -44,7 +53,6 @@ def get_closest_images(query_features, num_results=10):
     idx_closest = sorted(range(len(distances)), key=lambda k: distances[k])[:num_results]
     return idx_closest
 
-
 def get_random_description():
     descriptions = [
         "Elegant diamond–studded ring.",
@@ -64,15 +72,12 @@ def store_details_and_open(img_path, price, description):
         "price": price,
         "description": description
     }
-    # Change the page to "details"
     st.session_state["page"] = "details"
-
-
 
 # ----------------------------
 # UI Logic
 # ----------------------------
-st.set_page_config(page_title="YasOrna Visual Search", layout="wide")
+
 if "page" not in st.session_state:
     st.session_state["page"] = "home"
 
@@ -100,7 +105,7 @@ if st.session_state["page"] == "home":
             with cols[i % 3]:
                 st.image(img_path, use_container_width=True)
                 if st.button(f"View → {i}", key=f"view_{i}"):
-                    store_details_and_open(img_path,  price, description)
+                    store_details_and_open(img_path, price, description)
 
 elif st.session_state["page"] == "details":
     product = st.session_state.get("selected_product", {})
@@ -112,7 +117,5 @@ elif st.session_state["page"] == "details":
 
         if st.button("🔙 Back to Results"):
             st.session_state["page"] = "home"
-            # Remove st.experimental_rerun(), as it's no longer required
     else:
         st.warning("No product selected. Go back and choose one.")
-
