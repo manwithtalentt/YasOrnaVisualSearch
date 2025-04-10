@@ -14,54 +14,42 @@ from keras.applications.imagenet_utils import preprocess_input
 # Page Config
 # ----------------------------------------
 st.set_page_config(page_title="YasOrna Visual Search", layout="wide")
-st.title("🔍 YasOrna Visual Jewelry Search")
 
 # ----------------------------------------
-# Paths
+# Download model if not exists
 # ----------------------------------------
 MODEL_PATH = "feature_extractor.h5"
 GOOGLE_DRIVE_ID = "18ALhVqJ0We9MMs3wzqytbdvWHCDw2Bc0"
 GOOGLE_DRIVE_URL = f"https://drive.google.com/uc?id={GOOGLE_DRIVE_ID}"
-IMAGE_BASE_DIR = os.path.join(os.getcwd(), "Images")
 
-# ----------------------------------------
-# Load Feature Extractor Model
-# ----------------------------------------
 if not os.path.exists(MODEL_PATH):
     with st.spinner("🔽 Downloading model from Google Drive..."):
         gdown.download(GOOGLE_DRIVE_URL, MODEL_PATH, quiet=False)
 
-try:
-    with st.spinner("⚙️ Loading model..."):
-        feat_extractor = load_model(MODEL_PATH)
-    st.success("✅ Model loaded.")
-except Exception as e:
-    st.error(f"❌ Failed to load model: {e}")
-    st.stop()
+# ----------------------------------------
+# Load model and feature files
+# ----------------------------------------
+feat_extractor = load_model(MODEL_PATH)
+
+with open("pca_model.pkl", "rb") as f:
+    pca = pickle.load(f)
+
+pca_features = np.load("pca_features.npy")
+
+with open("valid_images.pkl", "rb") as f:
+    valid_images = pickle.load(f)
 
 # ----------------------------------------
-# Load Features and Metadata
+# Fix paths for Linux
 # ----------------------------------------
-try:
-    with open("pca_model.pkl", "rb") as f:
-        pca = pickle.load(f)
+IMAGE_BASE_DIR = os.path.join(os.getcwd(), "Images")  # Adjust if Images is in a different location
 
-    pca_features = np.load("pca_features.npy")
+def fix_path(path):
+    fixed = os.path.normpath(path.replace("\\", "/"))  # Windows to Linux format
+    subpath = os.path.join(*fixed.split(os.sep)[-2:])  # Keep last 2 parts like "Bangles/image1.png"
+    return os.path.join(IMAGE_BASE_DIR, subpath)
 
-    with open("valid_images.pkl", "rb") as f:
-        valid_images = pickle.load(f)
-
-    # Fix Windows paths to Linux-style paths
-    def fix_path(path):
-        fixed = os.path.normpath(path.replace("\\", "/"))
-        subpath = os.path.join(*fixed.split(os.sep)[-2:])
-        return os.path.join(IMAGE_BASE_DIR, subpath)
-
-    valid_images = [fix_path(p) for p in valid_images]
-
-except Exception as e:
-    st.error(f"❌ Failed to load features: {e}")
-    st.stop()
+valid_images = [fix_path(p) for p in valid_images]
 
 # ----------------------------------------
 # Helper Functions
@@ -108,31 +96,29 @@ if "page" not in st.session_state:
     st.session_state["page"] = "home"
 
 if st.session_state["page"] == "home":
+    st.title("🔍 Visual Jewelry Search")
     uploaded_file = st.file_uploader("📤 Upload an image", type=["jpg", "jpeg", "png"])
 
     if uploaded_file is not None:
         st.image(uploaded_file, caption="Uploaded Image", use_container_width=True)
 
-        try:
-            img, x = process_image(uploaded_file)
-            features = feat_extractor.predict(x)
+        img, x = process_image(uploaded_file)
+        features = feat_extractor.predict(x)
 
-            similar_images = get_closest_images(features)
+        similar_images = get_closest_images(features)
 
-            st.subheader("🔗 Most Similar Products")
+        st.subheader("🔗 Most Similar Products")
 
-            cols = st.columns(3)
-            for i, idx in enumerate(similar_images):
-                img_path = valid_images[idx]
-                price = f"₹{random.randint(5000, 100000):,}"
-                description = get_random_description()
+        cols = st.columns(3)
+        for i, idx in enumerate(similar_images):
+            img_path = valid_images[idx]
+            price = f"₹{random.randint(5000, 100000):,}"
+            description = get_random_description()
 
-                with cols[i % 3]:
-                    st.image(img_path, use_container_width=True)
-                    if st.button(f"View → {i}", key=f"view_{i}"):
-                        store_details_and_open(img_path, price, description)
-        except Exception as e:
-            st.error(f"❌ Error during processing: {e}")
+            with cols[i % 3]:
+                st.image(img_path, use_container_width=True)
+                if st.button(f"View → {i}", key=f"view_{i}"):
+                    store_details_and_open(img_path, price, description)
 
 elif st.session_state["page"] == "details":
     product = st.session_state.get("selected_product", {})
