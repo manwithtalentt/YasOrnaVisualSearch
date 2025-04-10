@@ -42,11 +42,11 @@ with open("valid_images.pkl", "rb") as f:
 # ----------------------------------------
 # Fix paths for Linux
 # ----------------------------------------
-IMAGE_BASE_DIR = os.path.join(os.getcwd(), "Images")  # Adjust if Images is in a different location
+IMAGE_BASE_DIR = os.path.join(os.getcwd(), "Images")
 
 def fix_path(path):
-    fixed = os.path.normpath(path.replace("\\", "/"))  # Windows to Linux format
-    subpath = os.path.join(*fixed.split(os.sep)[-2:])  # Keep last 2 parts like "Bangles/image1.png"
+    fixed = os.path.normpath(path.replace("\\", "/"))
+    subpath = os.path.join(*fixed.split(os.sep)[-2:])
     return os.path.join(IMAGE_BASE_DIR, subpath)
 
 valid_images = [fix_path(p) for p in valid_images]
@@ -97,10 +97,21 @@ if "page" not in st.session_state:
 
 if st.session_state["page"] == "home":
     st.title("🔍 Visual Jewelry Search")
-    uploaded_file = st.file_uploader("📤 Upload an image", type=["jpg", "jpeg", "png"])
+    st.markdown("## 📤 Upload or 📸 Capture an Image")
+
+    upload_tab, camera_tab = st.tabs(["Upload", "Capture"])
+    uploaded_file = None
+
+    with upload_tab:
+        uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
+
+    with camera_tab:
+        camera_image = st.camera_input("Take a picture")
+        if camera_image is not None:
+            uploaded_file = camera_image
 
     if uploaded_file is not None:
-        st.image(uploaded_file, caption="Uploaded Image", use_container_width=True)
+        st.image(uploaded_file, caption="Selected Image", use_container_width=True)
 
         img, x = process_image(uploaded_file)
         features = feat_extractor.predict(x)
